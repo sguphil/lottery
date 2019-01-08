@@ -1,5 +1,6 @@
 let request = require('request');
 let rp = require('request-promise');
+let lodash = require('lodash');
 const settings = require('./config');
 const uuidv1 = require('uuid/v1');
 
@@ -81,7 +82,10 @@ async function safeAfterlogin(cookie) {
 }
 async function login(cookie) {
   //登陆post地址
-  let url = settings.config.rootUrl + '/login/login.mvc?username=kgcphy00&password=1038463vWx&_BrowserInfo=firefox/66.0';
+  let userName = settings.config.userName;
+  let password = settings.config.password;
+  let url = settings.config.rootUrl + '/login/login.mvc?username='+
+    userName+'&password='+password+'&_BrowserInfo=firefox/66.0';
 
   //设置头部
   let headers = {
@@ -137,9 +141,9 @@ async function logout(cookie) {
   return res;
 }
 
-// https://123.jn700.com/betType/bettingTime.mvc?gameType=19
-async function getBettingTime(cookie) {
-  let url = settings.config.rootUrl + '/betType/bettingTime.mvc?gameType=19';
+// https://123.jn700.com/betType/lotterTime.mvc?gameType=19
+async function getLotterTime(cookie) {
+  let url = settings.config.rootUrl + '/betType/lotterTime.mvc?gameType=19';
 
   //设置头部
   let headers = {
@@ -288,7 +292,9 @@ let bettingArray = [
   ['01,04,05,06,07,08,10'],
   ['01,02,05,06,07,09,10']
 ];
-let bettingNum1 = '03,04,05,06,07,08,09';
+
+let allNum = ['01','02','03','04','05','06','07','08','09','10'];
+let bettingNum1 = '01,02,03,04,05,06,07';//'01,02,03,04,05,06,07,08,09,10';
 let bettingNum2 = '03,04,05,06,07,08,09';
 let bettingNum3 = '03,04,05,06,07,08,09';
 let bettingNum4 = '01,04,05,06,07,08,09';
@@ -314,14 +320,14 @@ async function start() {
     await safeAfterlogin(globalCookie);
     globalCookie = await login();
     console.log('2======cookie:', globalCookie);
-    setInterval(intervalBetting, 1.5 * 1000);
+    setInterval(intervalBetting, 2 * 1000);
   } catch (err) {
     console.log('error occured when starting:', err);
   }
 }
 
 async function start1() {
-  // let globalCookie = await login();
+  let globalCookie = await login();
   console.log('======cookie:', globalCookie);
 
   let userInfo = await getUserInfo(globalCookie);
@@ -370,11 +376,13 @@ async function intervalBetting() {
       return;
     }
 
-
     if (serviceStatus == 'forceStop') {
       console.log(' service is forceStop');
       return;
     }
+
+    // let lotteryTime = await getLotterTime(cookie);
+    // console.log('kkkkk==========lotteryTime:', lotteryTime);
     // closetime = (new Date(bettingTime.CLOSETIME)).getTime();
     if (closetime && currentTime < closetime) {
       console.log(' waitting for next round current and closetime:', currentTime,
@@ -406,14 +414,13 @@ async function intervalBetting() {
     }
 
     console.log('====================11111111=====');
+
     let initGameRes = await initPk10(cookie);
     let gameBody = JSON.parse(initGameRes.body);
 
-    // let bettingTime = await getBettingTime(cookie);
-    // console.log('============bettingTime:', typeof (bettingTime), bettingTime);
-
     let currentNo = gameBody.data.current.lotteryNums.issueno;
-    closetime = gameBody.data.current.lotteryNums.closetime;
+    // closetime = gameBody.data.current.lotteryNums.closetime;
+    closetime = (new Date(gameBody.data.current.closeTime)).getTime();
     let isclose = gameBody.data.current.isclose;
 
     // TODO: add checking time
@@ -434,7 +441,7 @@ async function intervalBetting() {
     }
 
     let history = gameBody.data.history[gameBody.data.history.length - 1];
-    console.log('previous result======res:', history);
+    console.log('previous result======res:', gameBody.data.history.length, history);
 
     let bettingObj = buildBettingPara(initGameRes, '');
 
@@ -444,32 +451,27 @@ async function intervalBetting() {
     let bodyStr;
     let betNums = '';
     let digits = '';
-    while (position < 10) {
+    let seperaters = ['|','|','|','|','|','|','|','|','|','|'];
+    while (position < 5) {
+      let randomNum = lodash.shuffle(allNum).slice(0, 7);
       if (position === 0) {
-        betNums = bettingArray[position][0];
+        betNums = randomNum; // bettingArray[position][0];
         digits = position.toString();
-        // betRes = await betting7(globalCookie, bettingObj, bettingArray[position][0], position);
-        // bodyStr = betRes.body;
       } else {
-        betNums = betNums + '|' + bettingArray[position][0];
+        betNums = betNums + '|' + randomNum; // bettingArray[position][0];
         digits = digits + ',' + position
-        // bodyStr = betRes.body;
-        // betRes = await betting7(globalCookie, bettingObj, bettingArray[position][0], position, bodyStr);
       }
-      // console.log('betting7======bettingObj:', bettingObj);
-      // console.log('betting7======bodyStr:', bodyStr);
+      seperaters.splice(0,1);
+      
       position = position + 1;
-      // if (bodyStr && JSON.parse(bodyStr).code !== 200) {
-      //   position = position + 10;
-      //   console.log('break this round:', bodyStr);
-      // }
-      // await sleep(3);
     }
+
+    betNums = betNums + seperaters.join('');
     console.log('============betNums', betNums);
     console.log('============digits', digits);
-    // betRes = await betting7(globalCookie, bettingObj, betNums, digits);
-    // bodyStr = betRes.body;
-    // console.log('break this round:', bodyStr);
+    betRes = await betting7(globalCookie, bettingObj, betNums, digits);
+    bodyStr = betRes.body;
+    console.log('break this round:', bodyStr);
     //await logout(globalCookie);
   } catch (err) {
     console.log('======err:', err);
