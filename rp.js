@@ -43,8 +43,8 @@ async function pcIndex() {
     'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:66.0) Gecko/20100101 Firefox/66.0',
     'Accept': 'application/json, text/javascript, */*; q=0.01',
     'Accept-Language': 'zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2',
-    'Accept-Encoding': 'gzip, deflate, br',
-    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+
+    'Content-Type': 'application/x-www-form-urlencoded',
     'X-Requested-With': 'XMLHttpRequest',
   };
   let res = await requestPromise(opts);
@@ -64,8 +64,8 @@ async function safeAfterlogin(cookie) {
     'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:66.0) Gecko/20100101 Firefox/66.0',
     'Accept': 'application/json, text/javascript, */*; q=0.01',
     'Accept-Language': 'zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2',
-    'Accept-Encoding': 'gzip, deflate, br',
-    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+
+    'Content-Type': 'application/x-www-form-urlencoded',
     'X-Requested-With': 'XMLHttpRequest',
   };
 
@@ -90,8 +90,8 @@ async function login(cookie) {
     'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:66.0) Gecko/20100101 Firefox/66.0',
     'Accept': 'application/json, text/javascript, */*; q=0.01',
     'Accept-Language': 'zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2',
-    'Accept-Encoding': 'gzip, deflate, br',
-    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+
+    'Content-Type': 'application/x-www-form-urlencoded',
     'X-Requested-With': 'XMLHttpRequest',
   };
 
@@ -100,8 +100,10 @@ async function login(cookie) {
     method: 'POST',
     headers: headers,
     timeout: 10000,
+    rejectUnauthorized: false,
   };
   let res = await requestPromise(opts);
+  console.log('======login test====', res.body);
   let setCookie = res.headers['set-cookie'];
   return setCookie;
 }
@@ -120,8 +122,8 @@ async function logout(cookie) {
     'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:66.0) Gecko/20100101 Firefox/66.0',
     'Accept': 'application/json, text/javascript, */*; q=0.01',
     'Accept-Language': 'zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2',
-    'Accept-Encoding': 'gzip, deflate, br',
-    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+
+    'Content-Type': 'application/x-www-form-urlencoded',
     'X-Requested-With': 'XMLHttpRequest',
   };
 
@@ -147,8 +149,8 @@ async function getBettingTime(cookie) {
     'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:66.0) Gecko/20100101 Firefox/66.0',
     'Accept': 'application/json, text/javascript, */*; q=0.01',
     'Accept-Language': 'zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2',
-    'Accept-Encoding': 'gzip, deflate, br',
-    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+
+    'Content-Type': 'application/x-www-form-urlencoded',
     'X-Requested-With': 'XMLHttpRequest',
   };
 
@@ -172,8 +174,8 @@ async function getUserInfo(cookie) {
       'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:66.0) Gecko/20100101 Firefox/66.0',
       'Accept': 'application/json, text/javascript, */*; q=0.01',
       'Accept-Language': 'zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2',
-      'Accept-Encoding': 'gzip, deflate, br',
-      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+
+      'Content-Type': 'application/x-www-form-urlencoded',
       'X-Requested-With': 'XMLHttpRequest',
     },
     method: 'POST',
@@ -195,8 +197,8 @@ async function initPk10(cookie) {
       'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:66.0) Gecko/20100101 Firefox/66.0',
       'Accept': 'application/json, text/javascript, */*; q=0.01',
       'Accept-Language': 'zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2',
-      'Accept-Encoding': 'gzip, deflate, br',
-      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+
+      'Content-Type': 'application/x-www-form-urlencoded',
       'X-Requested-With': 'XMLHttpRequest',
     },
     method: 'POST',
@@ -261,8 +263,7 @@ async function betting7(cookie, bettingParaObj, bettingNum, position, nextBettin
       'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:66.0) Gecko/20100101 Firefox/66.0',
       'Accept': 'application/json, text/javascript, */*; q=0.01',
       'Accept-Language': 'zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2',
-      'Accept-Encoding': 'gzip, deflate, br',
-      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+      'Content-Type': 'application/x-www-form-urlencoded',
       'X-Requested-With': 'XMLHttpRequest',
     },
     method: 'POST',
@@ -308,12 +309,12 @@ let currentLotteryVal = 0;
 
 async function start() {
   try {
-    //globalCookie = await pcIndex();
-    //console.log('1======cookie:', globalCookie);
-    // await safeAfterlogin(globalCookie);
+    globalCookie = await pcIndex();
+    console.log('1======cookie:', globalCookie);
+    await safeAfterlogin(globalCookie);
     globalCookie = await login();
     console.log('2======cookie:', globalCookie);
-    setInterval(intervalBetting, 10 * 1000);
+    setInterval(intervalBetting, 1.5 * 1000);
   } catch (err) {
     console.log('error occured when starting:', err);
   }
@@ -362,8 +363,6 @@ async function intervalBetting() {
     const cookie = globalCookie;
     let userInfoRes = await getUserInfo(cookie);
     let userInfoBody = JSON.parse(userInfoRes.body);
-    // let bettingTime = await getBettingTime(cookie);
-    // console.log('============bettingTime:', typeof (bettingTime), bettingTime);
     let currentTime = new Date().getTime();
 
     if (serviceStatus == 'running') {
@@ -380,16 +379,16 @@ async function intervalBetting() {
     if (closetime && currentTime < closetime) {
       console.log(' waitting for next round current and closetime:', currentTime,
         closetime, 'ext: ' + (closetime - currentTime) / 1000 + 's');
-      // if (!userInfoBody || userInfoBody.code !== 200) {
-      //   console.log('balance: '+ userInfoBody.data.lotteryBal);
-      // }
+      if (!userInfoBody || userInfoBody.code !== 200) {
+        console.log('balance: ' + userInfoBody.data.lotteryBal);
+      }
       return;
     }
 
     serviceStatus = 'running';
 
     if (userInfoBody.code !== 200) {
-      console.log('userInfo======lotteryBal:', userInfoBody);
+      console.log('userInfo======userInfoBody:', userInfoBody);
       serviceStatus = 'normal';
       return;
     }
@@ -406,8 +405,12 @@ async function intervalBetting() {
       return;
     }
 
+    console.log('====================11111111=====');
     let initGameRes = await initPk10(cookie);
     let gameBody = JSON.parse(initGameRes.body);
+
+    // let bettingTime = await getBettingTime(cookie);
+    // console.log('============bettingTime:', typeof (bettingTime), bettingTime);
 
     let currentNo = gameBody.data.current.lotteryNums.issueno;
     closetime = gameBody.data.current.lotteryNums.closetime;
@@ -467,7 +470,7 @@ async function intervalBetting() {
     // betRes = await betting7(globalCookie, bettingObj, betNums, digits);
     // bodyStr = betRes.body;
     // console.log('break this round:', bodyStr);
-    await logout(globalCookie);
+    //await logout(globalCookie);
   } catch (err) {
     console.log('======err:', err);
     // await logout(globalCookie);
