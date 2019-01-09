@@ -84,8 +84,8 @@ async function login(cookie) {
   //登陆post地址
   let userName = settings.config.userName;
   let password = settings.config.password;
-  let url = settings.config.rootUrl + '/login/login.mvc?username='+
-    userName+'&password='+password+'&_BrowserInfo=firefox/66.0';
+  let url = settings.config.rootUrl + '/login/login.mvc?username=' +
+    userName + '&password=' + password + '&_BrowserInfo=firefox/66.0';
 
   //设置头部
   let headers = {
@@ -241,20 +241,60 @@ function buildBettingPara(pk10Gameinfo, bettingNum) {
   return bettingParaObj;
 }
 
-async function betting7(cookie, bettingParaObj, bettingNum, position, nextBettingTokenStr) {
+/***
+ * let record = {
+  rank0:{
+    issueNo: '',
+    bettingNums:'',
+    result:false,
+    times: 0,
+  },
+ */
+function isBingo(position, record, history) {
+  if (!record['rank' + position].issueNo) {
+    return true;
+  }
+
+  if (history.issueno != record['rank' + position].issueNo) {
+    console.log('=========check history bingo error======', history.issueno, record['rank' + position].issueNo);
+    throw 'error occured when check history bingo';
+  }
+
+  let recordNums = lodash.split(lodash.trimEnd(lodash.trimStart(record['rank' + position].bettingNums, '|'), '|'), ',');
+  let historyNums = lodash.split(history.nums, ' ');
+
+  let isBingo = lodash.intersection(recordNums, historyNums).length > 0 ? true : false;
+  return isBingo;
+}
+
+async function betting7(cookie, bettingParaObj, bettingNum, position, history, nextBettingTokenStr) {
   // start betting
+  if (globalRecord['rank' + position].issueNo == bettingParaObj.issueNo){
+    console.log('=========betting7===position already betted:', position, globalRecord['rank' + position].issueNo);
+    return;
+  }
+
   if (nextBettingTokenStr) {
     let tokenObj = JSON.parse(nextBettingTokenStr);
     bettingParaObj.token = tokenObj.data.token_tz;
     bettingParaObj.touZhuHaoMa[0].touZhuHaoMa = bettingNum;
   }
 
-  if (bettingNum) {
-    bettingParaObj.touZhuHaoMa[0].touZhuHaoMa = bettingNum;
-  }
+  bettingParaObj.touZhuHaoMa[0].touZhuHaoMa = bettingNum;
+  bettingParaObj.touZhuHaoMa[0].digit = position;
 
-  if (position) {
-    bettingParaObj.touZhuHaoMa[0].digit = position;
+  let tmpTimes = 0;
+  if (!isBingo(position, globalRecord, history)) { // should double
+    if (globalRecord['rank' + position].times < globalMultiple.length) {
+      bettingParaObj.touZhuHaoMa[0].touZhuBeiShu = globalMultiple[globalRecord['rank' + position].times];
+      tmpTimes = globalRecord['rank' + position].times + 1;
+    } else {
+      bettingParaObj.touZhuHaoMa[0].touZhuBeiShu = globalMultiple[0];
+      tmpTimes = 0;
+    }
+  } else {
+    bettingParaObj.touZhuHaoMa[0].touZhuBeiShu = globalMultiple[0];
+    tmpTimes = 0;
   }
 
   // start call 
@@ -276,6 +316,12 @@ async function betting7(cookie, bettingParaObj, bettingNum, position, nextBettin
   };
 
   let res = await requestPromise(opts);
+  let bodyStr = res.body;
+  if (bodyStr && JSON.parse(bodyStr).code == 200) {
+    globalRecord['rank' + position].times = tmpTimes;
+    globalRecord['rank' + position].issueNo = bettingParaObj.issueNo;
+    globalRecord['rank' + position].bettingNums = bettingNum;
+  }
   return res;
 }
 
@@ -293,7 +339,74 @@ let bettingArray = [
   ['01,02,05,06,07,09,10']
 ];
 
-let allNum = ['01','02','03','04','05','06','07','08','09','10'];
+/**
+ * record the betting numbers
+ */
+const globalMultiple = [1, 4, 18, 81, 365];
+let globalRecord = {
+  rank0: {
+    issueNo: '',
+    bettingNums: '',
+    result: false,
+    times: 0,
+  },
+  rank1: {
+    issueNo: '',
+    bettingNums: '',
+    result: false,
+    times: 0,
+  },
+  rank2: {
+    issueNo: '',
+    bettingNums: '',
+    result: false,
+    times: 0,
+  },
+  rank3: {
+    issueNo: '',
+    bettingNums: '',
+    result: false,
+    times: 0,
+  },
+  rank4: {
+    issueNo: '',
+    bettingNums: '',
+    result: false,
+    times: 0,
+  },
+  rank5: {
+    issueNo: '',
+    bettingNums: '',
+    result: false,
+    times: 0,
+  },
+  rank6: {
+    issueNo: '',
+    bettingNums: '',
+    result: false,
+    times: 0,
+  },
+  rank7: {
+    issueNo: '',
+    bettingNums: '',
+    result: false,
+    times: 0,
+  },
+  rank8: {
+    issueNo: '',
+    bettingNums: '',
+    result: false,
+    times: 0,
+  },
+  rank9: {
+    issueNo: '',
+    bettingNums: '',
+    result: false,
+    times: 0,
+  },
+}
+
+let allNum = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10'];
 let bettingNum1 = '01,02,03,04,05,06,07';//'01,02,03,04,05,06,07,08,09,10';
 let bettingNum2 = '03,04,05,06,07,08,09';
 let bettingNum3 = '03,04,05,06,07,08,09';
@@ -307,7 +420,7 @@ let bettingNum10 = '01,02,05,06,07,09,10';
 
 //// global 
 let globalCookie = ''
-let currentGameNo = 0;
+let currentGameNo = '';
 let serviceStatus = 'stop'; // stop - running - normal - forceStop
 const stopRunningVal = settings.config.maxLostVal || 50; // forceStop when lost reach stopRunningval
 let currentLotteryVal = 0;
@@ -360,6 +473,13 @@ async function start1() {
 
 }
 
+function test(){
+  let recordNums = lodash.split(lodash.trimEnd(lodash.trimStart('01,02,03,04,05,06,07|||||||||', '|'), '|'), ',');
+  let historyNums = lodash.split('01 04 02 05 06 03 08 09 07 10', ' ');
+  console.log('=========ttttttttttt==========', recordNums);
+  console.log('=========ttttttttttt==========', historyNums );
+  console.log('=========ttttttttttt==========', lodash.intersection(recordNums, historyNums).length );
+}
 
 
 let closetime = 0;
@@ -381,22 +501,19 @@ async function intervalBetting() {
       return;
     }
 
-    // let lotteryTime = await getLotterTime(cookie);
-    // console.log('kkkkk==========lotteryTime:', lotteryTime);
-    // closetime = (new Date(bettingTime.CLOSETIME)).getTime();
-    if (closetime && currentTime < closetime) {
-      console.log(' waitting for next round current and closetime:', currentTime,
-        closetime, 'ext: ' + (closetime - currentTime) / 1000 + 's');
-      if (!userInfoBody || userInfoBody.code !== 200) {
-        console.log('balance: ' + userInfoBody.data.lotteryBal);
-      }
-      return;
-    }
+    // if (closetime && currentTime < closetime) {
+    //   console.log(' waitting for next round current and closetime:', currentTime,
+    //     closetime, 'ext: ' + (closetime - currentTime) / 1000 + 's');
+    //   if (!userInfoBody || userInfoBody.code !== 200) {
+    //     console.log('balance: ' + userInfoBody.data.lotteryBal);
+    //   }
+    //   return;
+    // }
 
     serviceStatus = 'running';
 
     if (userInfoBody.code !== 200) {
-      console.log('userInfo======userInfoBody:', userInfoBody);
+      console.log('get error response userInfo======userInfoBody:', userInfoBody);
       serviceStatus = 'normal';
       return;
     }
@@ -420,6 +537,14 @@ async function intervalBetting() {
 
     let currentNo = gameBody.data.current.lotteryNums.issueno;
     // closetime = gameBody.data.current.lotteryNums.closetime;
+    let history = gameBody.data.history[gameBody.data.history.length - 1];
+    console.log('previous result======res:', gameBody.data.history.length, history);
+    if (parseInt(currentNo) !== (parseInt(history.issueno) + 1)) {
+      console.log('data not refresh check next round======currentNo, historyIssuno:', currentNo, history.issueno);
+      serviceStatus = 'normal';
+      return;
+    }
+
     closetime = (new Date(gameBody.data.current.closeTime)).getTime();
     let isclose = gameBody.data.current.isclose;
 
@@ -432,48 +557,43 @@ async function intervalBetting() {
     }
 
     console.log('======initGameRes currentNo:', currentNo);
-    if (currentGameNo == currentNo) {
+    if (!currentGameNo && currentGameNo == currentNo) {
       console.log('already betting======currentGameNo:', currentGameNo);
       serviceStatus = 'normal';
       return;
     } else {
       currentGameNo = currentNo;
     }
-
-    let history = gameBody.data.history[gameBody.data.history.length - 1];
-    console.log('previous result======res:', gameBody.data.history.length, history);
-
+    
     let bettingObj = buildBettingPara(initGameRes, '');
-
     // ==== start betting 10 section
-    let position = 0;
     let betRes;
     let bodyStr;
     let betNums = '';
     let digits = '';
-    let seperaters = ['|','|','|','|','|','|','|','|','|','|'];
-    while (position < 5) {
+    let positionArray = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+    for (let position of positionArray) {
+      let seperaters = ['|', '|', '|', '|', '|', '|', '|', '|', '|', '|'];
       let randomNum = lodash.shuffle(allNum).slice(0, 7);
+      betNums = randomNum; // bettingArray[position][0];
+      seperaters[position] = betNums;
+      betNums = seperaters.join('');
       if (position === 0) {
-        betNums = randomNum; // bettingArray[position][0];
         digits = position.toString();
+        betRes = await betting7(globalCookie, bettingObj, betNums, digits, history);
       } else {
-        betNums = betNums + '|' + randomNum; // bettingArray[position][0];
-        digits = digits + ',' + position
+        bodyStr = betRes.body;
+        digits = position.toString();
+        betRes = await betting7(globalCookie, bettingObj, betNums, digits, history, bodyStr);
       }
-      seperaters.splice(0,1);
-      
-      position = position + 1;
+      console.log('finish this section:', betRes.body);
+      await sleep(3);
     }
-
-    betNums = betNums + seperaters.join('');
-    console.log('============betNums', betNums);
-    console.log('============digits', digits);
-    betRes = await betting7(globalCookie, bettingObj, betNums, digits);
-    bodyStr = betRes.body;
-    console.log('break this round:', bodyStr);
-    //await logout(globalCookie);
+    console.log('finish this round record:', globalRecord);
   } catch (err) {
+    if (err.code && err.code == 'ESOCKETTIMEDOUT'){
+      currentGameNo = '';
+    }
     console.log('======err:', err);
     // await logout(globalCookie);
     serviceStatus = 'normal';
@@ -484,3 +604,4 @@ async function intervalBetting() {
 }
 
 start();
+// test();
