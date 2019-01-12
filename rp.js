@@ -3,10 +3,12 @@ let rp = require('request-promise');
 let lodash = require('lodash');
 const settings = require('./config');
 const uuidv1 = require('uuid/v1');
+let log4js = require("log4js");
+let log4js_config = require("./logconfig.json");
+log4js.configure(log4js_config);
+let logger = log4js.getLogger("pk10");
 
-// process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
-
-console.log('start test...', settings.config);
+logger.info('start test...', settings.config);
 async function requestPromise(opts) {
   return new Promise(function (resolve, reject) {
     request(opts, (err, res, body) => {
@@ -107,7 +109,7 @@ async function login(cookie) {
     rejectUnauthorized: false,
   };
   let res = await requestPromise(opts);
-  console.log('======login test====', res.body);
+  logger.debug('======login body====', res.body);
   let setCookie = res.headers['set-cookie'];
   return setCookie;
 }
@@ -219,7 +221,7 @@ function buildBettingPara(pk10Gameinfo, bettingNum) {
   let username = gameInfo.data.username;
   let userBonus = gameInfo.data.userBonus;
   let issueNo = gameInfo.data.current.lotteryNums.issueno;
-  console.log('=======111=====token_tz:', token_tz);
+  logger.debug('=======111=====token_tz:', token_tz);
   let bettingParaObj = {
     'gameId': 19,
     'token': token_tz,
@@ -256,22 +258,25 @@ function isBingo(position, record, history) {
   }
 
   if (history.issueno != record['rank' + position].issueNo) {
-    console.log('=========check history bingo error======', history.issueno, record['rank' + position].issueNo);
-    throw 'error occured when check history bingo';
+    logger.error('=========check history bingo error, issueNo is not match, multiple it======', history.issueno, record['rank' + position].issueNo);
+    return false;
+    //throw { code: 'error occured when check history bingo' };
   }
 
   let recordNums = lodash.split(lodash.trimEnd(lodash.trimStart(record['rank' + position].bettingNums, '|'), '|'), ',');
   let historyNums = lodash.split(history.nums, ' ');
-
-  let isBingo = lodash.intersection(recordNums, historyNums).length > 0 ? true : false;
+  logger.debug('#############=========check history======position,recordNums, historyNums,[historyNums[parseInt(position)]]):',
+    position, recordNums, historyNums, [historyNums[parseInt(position)]]);
+  let isBingo = lodash.intersection(recordNums, [historyNums[parseInt(position)]]).length > 0 ? true : false;
   return isBingo;
 }
 
 async function betting7(cookie, bettingParaObj, bettingNum, position, history, nextBettingTokenStr) {
   // start betting
-  if (globalRecord['rank' + position].issueNo == bettingParaObj.issueNo){
-    console.log('=========betting7===position already betted:', position, globalRecord['rank' + position].issueNo);
-    return;
+  if (globalRecord['rank' + position].issueNo == bettingParaObj.issueNo) {
+    logger.info('=========betting7===position already betted:', position, globalRecord['rank' + position].issueNo);
+    let token = nextBettingTokenStr ? JSON.parse(nextBettingTokenStr).data.token_tz : bettingParaObj.token;
+    return { body: '{"msg":"Already betted","code":202,"data":{"MESSAGE":"Already betted","STATUS":100,"token_tz":"' + token + '"}}' };
   }
 
   if (nextBettingTokenStr) {
@@ -285,9 +290,12 @@ async function betting7(cookie, bettingParaObj, bettingNum, position, history, n
 
   let tmpTimes = 0;
   if (!isBingo(position, globalRecord, history)) { // should double
-    if (globalRecord['rank' + position].times < globalMultiple.length) {
-      bettingParaObj.touZhuHaoMa[0].touZhuBeiShu = globalMultiple[globalRecord['rank' + position].times];
+    if (globalRecord['rank' + position].times < globalMultiple.length-1) {
+      bettingParaObj.touZhuHaoMa[0].touZhuBeiShu = globalMultiple[globalRecord['rank' + position].times + 1];
       tmpTimes = globalRecord['rank' + position].times + 1;
+    } else if (globalRecord['rank' + position].times == globalMultiple.length-1) {
+      bettingParaObj.touZhuHaoMa[0].touZhuBeiShu = globalMultiple[globalRecord['rank' + position].times -1];
+      tmpTimes =0;
     } else {
       bettingParaObj.touZhuHaoMa[0].touZhuBeiShu = globalMultiple[0];
       tmpTimes = 0;
@@ -296,7 +304,8 @@ async function betting7(cookie, bettingParaObj, bettingNum, position, history, n
     bettingParaObj.touZhuHaoMa[0].touZhuBeiShu = globalMultiple[0];
     tmpTimes = 0;
   }
-
+  logger.info('$$$$$$$$$$$$$$$$$$$$=======position betted:position, tmpTimes, globalRecord[rank + position].times, bettingParaObj.touZhuHaoMa[0].touZhuBeiShu',
+    position, tmpTimes, globalRecord['rank' + position].times, bettingParaObj.touZhuHaoMa[0].touZhuBeiShu);
   // start call 
   let opts = {
     url: settings.config.rootUrl + '/cathectic/cathectic.mvc',
@@ -315,12 +324,23 @@ async function betting7(cookie, bettingParaObj, bettingNum, position, history, n
     form: { json: JSON.stringify(bettingParaObj) },
   };
 
-  let res = await requestPromise(opts);
-  let bodyStr = res.body;
-  if (bodyStr && JSON.parse(bodyStr).code == 200) {
-    globalRecord['rank' + position].times = tmpTimes;
-    globalRecord['rank' + position].issueNo = bettingParaObj.issueNo;
-    globalRecord['rank' + position].bettingNums = bettingNum;
+  let res;
+  try {
+    res = await requestPromise(opts);
+    let bodyStr = res.body;
+    if (bodyStr && JSON.parse(bodyStr).code == 200) {
+      globalRecord['rank' + position].times = tmpTimes;
+      globalRecord['rank' + position].issueNo = bettingParaObj.issueNo;
+      globalRecord['rank' + position].bettingNums = bettingNum;
+    }else if (bodyStr && JSON.parse(bodyStr).data.STATUS == 1002) {
+      logger.error('============error occured when betted===bodyStr:', bodyStr);
+	    throw {code: 'RESEND'};
+    } else {
+      globalBettingFinish = false;
+    }
+  } catch (err) {
+    globalBettingFinish = false;
+    throw err;
   }
   return res;
 }
@@ -342,7 +362,7 @@ let bettingArray = [
 /**
  * record the betting numbers
  */
-const globalMultiple = [1, 4, 18, 81, 365];
+const globalMultiple =  settings.config.multiple || [1, 4, 18, 81, 365];
 let globalRecord = {
   rank0: {
     issueNo: '',
@@ -406,48 +426,40 @@ let globalRecord = {
   },
 }
 
-let allNum = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10'];
-let bettingNum1 = '01,02,03,04,05,06,07';//'01,02,03,04,05,06,07,08,09,10';
-let bettingNum2 = '03,04,05,06,07,08,09';
-let bettingNum3 = '03,04,05,06,07,08,09';
-let bettingNum4 = '01,04,05,06,07,08,09';
-let bettingNum5 = '01,02,05,06,07,08,09';
-let bettingNum6 = '03,04,05,06,07,08,09';
-let bettingNum7 = '01,02,05,06,07,08,09';
-let bettingNum8 = '03,04,05,06,07,08,10';
-let bettingNum9 = '01,04,05,06,07,08,10';
-let bettingNum10 = '01,02,05,06,07,09,10';
 
 //// global 
+const globalAllNum = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10'];
 let globalCookie = ''
-let currentGameNo = '';
-let serviceStatus = 'stop'; // stop - running - normal - forceStop
-const stopRunningVal = settings.config.maxLostVal || 50; // forceStop when lost reach stopRunningval
-let currentLotteryVal = 0;
+let globalCurrentGameNo = '';
+let gServiceStatus = 'stop'; // stop - running - normal - forceStop
+const gStopRunningLostVal = settings.config.maxLostVal || 50; // forceStop when lost reach stopRunningLostVal
+const gStopRunningWinVal = settings.config.maxWinVal || 100; // forceStop when lost reach stopRunningWinVal
+let gCurrentLotteryVal = 0;
+let globalBettingFinish = 'unknown'; // unknown finished retry
 ////
 
 async function start() {
   try {
     globalCookie = await pcIndex();
-    console.log('1======cookie:', globalCookie);
+    logger.debug('1======cookie:', globalCookie);
     await safeAfterlogin(globalCookie);
     globalCookie = await login();
-    console.log('2======cookie:', globalCookie);
+    logger.info('2======cookie:', globalCookie);
     setInterval(intervalBetting, 2 * 1000);
   } catch (err) {
-    console.log('error occured when starting:', err);
+    logger.error('error occured when starting:', err);
   }
 }
 
 async function start1() {
   let globalCookie = await login();
-  console.log('======cookie:', globalCookie);
+  logger.debug('======cookie:', globalCookie);
 
   let userInfo = await getUserInfo(globalCookie);
-  console.log('======userInfo:', userInfo.body);
+  logger.debug('======userInfo:', userInfo.body);
 
   let initGameRes = await initPk10(globalCookie);
-  console.log('======initGameRes:', initGameRes.body);
+  logger.debug('======initGameRes:', initGameRes.body);
 
   let bettingObj = buildBettingPara(initGameRes, '');
 
@@ -462,23 +474,30 @@ async function start1() {
       bodyStr = betRes.body;
       betRes = await betting7(globalCookie, bettingObj, bettingArray[position][0], bodyStr);
     }
-    console.log('======bettingObj:', bettingObj);
+    logger.debug('======bettingObj:', bettingObj);
     position = position + 1;
     if (bodyStr && JSON.parse(bodyStr).code !== 200) {
       position = position + 10;
-      console.log('11======bodyStr:', bodyStr);
+      logger.debug('11======bodyStr:', bodyStr);
     }
     await sleep(3);
   }
 
 }
 
-function test(){
-  let recordNums = lodash.split(lodash.trimEnd(lodash.trimStart('01,02,03,04,05,06,07|||||||||', '|'), '|'), ',');
-  let historyNums = lodash.split('01 04 02 05 06 03 08 09 07 10', ' ');
-  console.log('=========ttttttttttt==========', recordNums);
-  console.log('=========ttttttttttt==========', historyNums );
-  console.log('=========ttttttttttt==========', lodash.intersection(recordNums, historyNums).length );
+function test() {
+  let position = 0;
+  let recordNums = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10'];
+  let historyNums = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10'];
+  logger.debug('#############=========check history======position,recordNums, historyNums,[historyNums[parseInt(position)]]):',
+    position, recordNums, historyNums, [historyNums[parseInt(position)]]);
+  let isBingo = lodash.intersection(recordNums, [historyNums[parseInt(position)]]).length > 0 ? true : false;
+
+  // let token = 'kkkkkkk';
+  // let res = { body: '{"msg":"Already betted","code":201,"data":{"MESSAGE":"Already betted","STATUS":100,"token_tz":"' + token + '"}}' };
+  // let nextBettingTokenStr = res.body;
+  // let tokenN = nextBettingTokenStr ? JSON.parse(nextBettingTokenStr).data.token_tz : 'bettingParaObj.token';
+  logger.debug('=========ttttttttttt==========', isBingo);
 }
 
 
@@ -491,46 +510,51 @@ async function intervalBetting() {
     let userInfoBody = JSON.parse(userInfoRes.body);
     let currentTime = new Date().getTime();
 
-    if (serviceStatus == 'running') {
-      console.log(' service is running');
+    if (gServiceStatus == 'running') {
+      logger.debug(' service is running');
       return;
     }
 
-    if (serviceStatus == 'forceStop') {
-      console.log(' service is forceStop');
+    if (gServiceStatus == 'forceStop') {
+      logger.debug(' service is forceStop');
       return;
     }
 
     // if (closetime && currentTime < closetime) {
-    //   console.log(' waitting for next round current and closetime:', currentTime,
+    //   logger.debug(' waitting for next round current and closetime:', currentTime,
     //     closetime, 'ext: ' + (closetime - currentTime) / 1000 + 's');
     //   if (!userInfoBody || userInfoBody.code !== 200) {
-    //     console.log('balance: ' + userInfoBody.data.lotteryBal);
+    //     logger.debug('balance: ' + userInfoBody.data.lotteryBal);
     //   }
     //   return;
     // }
 
-    serviceStatus = 'running';
+    gServiceStatus = 'running';
 
     if (userInfoBody.code !== 200) {
-      console.log('get error response userInfo======userInfoBody:', userInfoBody);
-      serviceStatus = 'normal';
+      logger.error('get error response userInfo======userInfoBody:', userInfoBody);
+      gServiceStatus = 'normal';
       return;
     }
 
-    console.log('userInfo======lotteryBal:', userInfoBody.data.lotteryBal);
-    if (currentLotteryVal == 0) {
-      currentLotteryVal = userInfoBody.data.lotteryBal;
+    logger.info('userInfo======lotteryBal:', userInfoBody.data.lotteryBal);
+    if (gCurrentLotteryVal == 0) {
+      gCurrentLotteryVal = userInfoBody.data.lotteryBal;
     }
 
-    let forceStopVal = currentLotteryVal - stopRunningVal;
-    if (userInfoBody.data.lotteryBal < forceStopVal) {
-      serviceStatus = 'forceStop';
-      console.log('Warning !!! reach force stop value:', userInfoBody.data.lotteryBal);
+    let forceStopLostVal = gCurrentLotteryVal - gStopRunningLostVal;
+    if (userInfoBody.data.lotteryBal < forceStopLostVal) {
+      gServiceStatus = 'forceStop';
+      logger.warn('Warning !!! reach force stop lost value:', userInfoBody.data.lotteryBal, forceStopLostVal);
       return;
     }
 
-    console.log('====================11111111=====');
+    let forceStopWinVal = gCurrentLotteryVal + gStopRunningWinVal;
+    if (userInfoBody.data.lotteryBal >= forceStopWinVal) {
+      gServiceStatus = 'forceStop';
+      logger.warn('Warning !!! reach force stop win value:', userInfoBody.data.lotteryBal, forceStopWinVal);
+      return;
+    }
 
     let initGameRes = await initPk10(cookie);
     let gameBody = JSON.parse(initGameRes.body);
@@ -538,10 +562,10 @@ async function intervalBetting() {
     let currentNo = gameBody.data.current.lotteryNums.issueno;
     // closetime = gameBody.data.current.lotteryNums.closetime;
     let history = gameBody.data.history[gameBody.data.history.length - 1];
-    console.log('previous result======res:', gameBody.data.history.length, history);
+    logger.debug('previous result======res:', gameBody.data.history.length, history);
     if (parseInt(currentNo) !== (parseInt(history.issueno) + 1)) {
-      console.log('data not refresh check next round======currentNo, historyIssuno:', currentNo, history.issueno);
-      serviceStatus = 'normal';
+      logger.info('waitting...data not refresh check next round======currentNo, historyIssuno:', currentNo, history.issueno);
+      gServiceStatus = 'normal';
       return;
     }
 
@@ -551,20 +575,20 @@ async function intervalBetting() {
     // TODO: add checking time
 
     if (isclose) {
-      console.log('already close======currentGameNo:', currentGameNo);
-      serviceStatus = 'normal';
+      logger.info('already close======currentGameNo:', globalCurrentGameNo);
+      gServiceStatus = 'normal';
       return;
     }
 
-    console.log('======initGameRes currentNo:', currentNo);
-    if (!currentGameNo && currentGameNo == currentNo) {
-      console.log('already betting======currentGameNo:', currentGameNo);
-      serviceStatus = 'normal';
+    logger.info('======initGameRes currentNo, globalCurrentGameNo:', currentNo, globalCurrentGameNo);
+    if ((globalCurrentGameNo != '' && globalCurrentGameNo == currentNo) && globalBettingFinish) {
+      logger.debug('already betting======currentGameNo:', globalCurrentGameNo);
+      gServiceStatus = 'normal';
       return;
     } else {
-      currentGameNo = currentNo;
+      globalCurrentGameNo = currentNo;
     }
-    
+
     let bettingObj = buildBettingPara(initGameRes, '');
     // ==== start betting 10 section
     let betRes;
@@ -572,9 +596,10 @@ async function intervalBetting() {
     let betNums = '';
     let digits = '';
     let positionArray = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+    globalBettingFinish = true; // set expect value
     for (let position of positionArray) {
       let seperaters = ['|', '|', '|', '|', '|', '|', '|', '|', '|', '|'];
-      let randomNum = lodash.shuffle(allNum).slice(0, 7);
+      let randomNum = lodash.shuffle(globalAllNum).slice(0, 7);
       betNums = randomNum; // bettingArray[position][0];
       seperaters[position] = betNums;
       betNums = seperaters.join('');
@@ -586,22 +611,26 @@ async function intervalBetting() {
         digits = position.toString();
         betRes = await betting7(globalCookie, bettingObj, betNums, digits, history, bodyStr);
       }
-      console.log('finish this section:', betRes.body);
-      await sleep(3);
+      logger.info('finish this section:', betRes.body);
+      if (betRes && betRes.body && JSON.parse(betRes.body).code == 202) {
+        logger.debug('bbbbbbbbbetting not success, do not sleep');
+      } else {
+        await sleep(3);
+      }
     }
-    console.log('finish this round record:', globalRecord);
+    logger.info('finish this round record:', currentNo, globalRecord);
   } catch (err) {
-    if (err.code && err.code == 'ESOCKETTIMEDOUT'){
-      currentGameNo = '';
+    if (err.code && ((err.code == 'ESOCKETTIMEDOUT' && !globalBettingFinish) || err.code == 'RESEND')) {
+      globalCurrentGameNo = '';
     }
-    console.log('======err:', err);
+    logger.error('======err:', err);
     // await logout(globalCookie);
-    serviceStatus = 'normal';
+    gServiceStatus = 'normal';
   }
 
-  serviceStatus = 'normal';
-  console.log('betting7======serviceStatus:', serviceStatus);
+  gServiceStatus = 'normal';
+  logger.debug('betting7======serviceStatus:', gServiceStatus);
 }
 
 start();
-// test();
+//test();

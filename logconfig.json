@@ -1,0 +1,25 @@
+{
+    "appenders": [
+        {
+            "type": "console"
+
+        },
+        {
+            "category":"pk10",
+            "type": "dateFile",
+            "filename": "logs/",
+            "absolute": false,
+            "maxLogSize": 1024,
+            "backups": 3,
+            "pattern": "yyyyMMddhh.txt",
+            "absolute": false,
+            "alwaysIncludePattern": true
+        }
+    ],
+    "replaceConsole": true,
+    "levels":
+    {
+      "console":"ALL",
+      "pk10":"ALL"
+    }
+}
