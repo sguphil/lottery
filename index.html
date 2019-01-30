@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>bettou!</title>
+</head>
+
+<body>
+  <!-- 
+
+    <h1>set start!</h1>
+    We are using node
+    <script>document.write(process.versions.node)</script>,
+    Chrome
+    <script>document.write(process.versions.chrome)</script>,
+    and Electron
+    <script>document.write(process.versions.electron)</script>.
+  -->
+
+  <form class="form-horizontal">
+    <tr>
+      <td>用户名:</td>
+      <td>
+        <input type="text" id="username" style="width:150px" />
+      </td>
+    </tr>
+    </br>
+    <tr>
+      <td>密  码:</td>
+      <td>
+        <input type="password" id="password" style="width:150px" />
+      </td>
+    </tr>
+
+    <div class="control-group"><label class="control-label" contenteditable="false">倍投:</label>
+
+      <div class="controls"><input id="inputbettou" value="1, 4, 18, 81, 365" type="text" /></div>
+    </div>
+
+    <div class="control-group"><label class="control-label" contenteditable="false">底注倍数:</label>
+
+      <div class="controls"><input id="inputdizhu" value="1" placeholder="1" /></div>
+    </div>
+    <div class="control-group"><label class="control-label" contenteditable="false">单位:</label>
+      <td>
+        <input type="radio" name="identity" />角
+        <input type="radio" name="identity" />分
+        <input type="radio" name="identity" />厘
+      </td>
+    </div>
+    <div class="control-group"><label class="control-label" contenteditable="false">挂机方案:</label>
+      <td>
+        <input type="radio" name="identity_bet" />随机7位
+        <input type="radio" name="identity_bet" />前7位
+      </td>
+    </div>
+    <div class="control-group"><label class="control-label" contenteditable="false">止盈:</label>
+      <div class="controls"><input id="inputMaxWin" value="100" placeholder="100" /></div>
+    </div>
+
+    <div class="control-group"><label class="control-label" contenteditable="false">止损:</label>
+      <div class="controls"><input id="inputMaxLost" value="50" placeholder="50" /></div>
+    </div>
+    <div class="control-group"><label class="control-label" contenteditable="false">运行信息：</label>
+    <textarea id="resultText" cols="95" rows="22"></textarea>
+    </div>
+    <div class="control-group">
+      <div class="controls"><button class="btnstart" contenteditable="false" type="button" onclick="start()">start</button></div>
+    </div>
+
+    <div class="control-group">
+      <div class="controls"><button class="btnstop" contenteditable="false" type="button" onclick="stop()">stop</button></div>
+    </div>
+
+  </form>
+</body>
+<script>
+  let inputbettou = document.getElementById('inputbettou');
+  let inputdizhu = document.getElementById('inputdizhu');
+  let inputdanwei = document.getElementById('inputdanwei');
+  let radioDanwei = document.getElementsByName('identity');
+  let radioStrategy = document.getElementsByName('identity_bet');
+  let maxWin = document.getElementById('inputMaxWin');
+  let maxLost = document.getElementById('inputMaxLost');
+  let username = document.getElementById('username');
+  let password = document.getElementById('password');
+  let resultText = document.getElementById('resultText');
+
+  const { ipcRenderer } = require('electron')
+  let danwei = 0;
+  function start() {
+    for (let i = 0; i < radioDanwei.length; i++) {
+      if (radioDanwei[i].checked) {
+        if (i == 0) {
+          // alert('jiao');
+          danwei = 10;
+        } else if (i == 1) {
+          // alert('fen');
+          danwei = 100;
+        } else {
+          // alert('li');
+          danwei = 1000;
+        }
+      }
+    }
+    let betStategy = 0;
+    for (let i = 0; i < radioStrategy.length; i++) {
+      if (radioStrategy[i].checked) {
+        if (i == 0) {
+          // alert('jiao');
+          betStategy = 1;
+        } else if (i == 1) {
+          // alert('fen');
+          betStategy = 2;
+        } 
+      }
+    }
+
+    if (danwei == 0) {
+      resultText.value = 'parameter error:danwei';
+      //alert('parameter error:danwei');
+      return;
+    }
+
+    if (betStategy == 0) {
+      resultText.value = 'parameter error:betStategy';
+      //alert('parameter error:danwei');
+      return;
+    }
+
+    ipcRenderer.send('configTest', {
+      bettou: inputbettou.value,
+      dizhu: inputdizhu.value,
+      danwei: danwei,
+      maxWin: maxWin.value,
+      maxLost: maxLost.value,
+      username: username.value,
+      password: password.value,
+      betStategy:betStategy,
+    });
+  }
+
+  function stop() {
+    alert('========stop');
+    ipcRenderer.send('configTest', {
+      bettou: inputbettou.value.split(','),
+      dizhu: inputdizhu.value,
+      danwei: danwei,
+      maxWin: maxWin.value,
+      maxLost: maxLost.value,
+      username: username.value,
+      password: password.value,
+    });
+  }
+  ipcRenderer.on('error', function (e, args) {
+    // alert(args.msg);
+    resultText.value = args.msg;
+  });
+  ipcRenderer.on('ttt', function (e, args) {
+    // alert(args.msg);
+    resultText.value = args.msg;
+  })
+</script>
+
+</html>
