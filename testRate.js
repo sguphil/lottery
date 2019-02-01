@@ -22,7 +22,7 @@ function getBettingNum(pos = undefined){
     return theNum;
 }
 
-
+let balance = 1000;
 
 function multipleBetNums(){
     let small = ['01', '02', '03', '04', '05', '06', '07'];
@@ -39,34 +39,37 @@ function multipleBetNums(){
         let num = random.int(0,9);
         //console.log('index=============', num);
         let lotteryNum = globalAllNum[num]; //lodash.shuffle(globalAllNum)[0]; // get position 1 lottery num
+        balance = balance - 7;
         let isBingo = lodash.intersection([lotteryNum], betNums).length > 0 ? true: false;
         if (isBingo){
             continueLost = 0;
             record = [];
             stickTimes = 0;
+            balance = balance + 9;
+            betNums = getBettingNum(0);
         }else{
             record.push(lotteryNum);
             lotteryRecord.push(betNums.join(','));
             continueLost = continueLost + 1;
             if (parseInt(lotteryNum) > 7){
-                if (stickTimes > limit) {
-                    betNums = getBettingNum(0);
-                }else{
-                    betNums = getBettingNum(3);
-                }
-                // betNums = getBettingNum(3);
+                // if (stickTimes > limit) {
+                //     betNums = getBettingNum(0);
+                // }else{
+                //     betNums = getBettingNum(3);
+                // }
+                betNums = getBettingNum(3);
             }else{
-                if (stickTimes > limit) {
-                    betNums = getBettingNum(3);
-                }else{
-                    betNums = getBettingNum(0);
-                }
-                // betNums = getBettingNum();
+                // if (stickTimes > limit) {
+                //     betNums = getBettingNum(3);
+                // }else{
+                //     betNums = getBettingNum(0);
+                // }
+                betNums = getBettingNum(0);
             }
             stickTimes = stickTimes +1;
         }
         
-        if (continueLost > 4){
+        if (continueLost > 6){
             console.log('==================boom!!!====', i , '======bet===', lotteryRecord.length, lotteryRecord, '======record===', record);
             return i;
         }
@@ -85,4 +88,4 @@ while(j < testTimes){
    j = j+1;
 }
 
-console.log('ava=================boom!!!====', result/testTimes);
+console.log('ava=================boom!!!====', result/testTimes, balance);

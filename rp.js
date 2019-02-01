@@ -606,7 +606,7 @@ function getBettingNum(){
         '01,02,03,08,09,10,05',
         '01,02,03,08,09,10,06',
         '01,02,03,08,09,10,07'];
-    let indexArr = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+    let indexArr = [0, 1, 2, 3, 4, 5, 6, 7];
     let theNumIndex = lodash.shuffle(indexArr)[0];
     let theNum = totalLottery[0];
     if (settings.config.betStategy == 1){
