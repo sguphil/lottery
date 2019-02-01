@@ -439,7 +439,7 @@ let bettingArray = [
 /**
  * record the betting numbers
  */
-const globalMultiple =  settings.config.multiple || [1, 4, 18, 81, 365];
+let globalMultiple =  settings.config.multiple || [1, 4, 18, 81, 365];
 let globalRecord = {
   rank0: {
     issueNo: '',
@@ -509,8 +509,8 @@ const globalAllNum = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10'
 let globalCookie = ''
 let globalCurrentGameNo = '';
 let gServiceStatus = 'stop'; // stop - running - normal - forceStop
-const gStopRunningLostVal = settings.config.maxLostVal || 50; // forceStop when lost reach stopRunningLostVal
-const gStopRunningWinVal = settings.config.maxWinVal || 100; // forceStop when lost reach stopRunningWinVal
+let gStopRunningLostVal = settings.config.maxLostVal || 50; // forceStop when lost reach stopRunningLostVal
+let gStopRunningWinVal = settings.config.maxWinVal || 100; // forceStop when lost reach stopRunningWinVal
 let gCurrentLotteryVal = 0;
 let globalBettingFinish = 'unknown'; // unknown finished retry
 let gRuningResult = [];
@@ -524,6 +524,9 @@ async function start() {
   try {
     // gExceptionMsg.push('kkkkkkkkkkkkkk');
     // logger.info('===========111ggggggg=======eeeeee===', settings.config);
+    globalMultiple =  settings.config.multiple || [1, 4, 18, 81, 365];
+    gStopRunningLostVal = settings.config.maxLostVal || 50; // forceStop when lost reach stopRunningLostVal
+    gStopRunningWinVal = settings.config.maxWinVal || 100; // forceStop when lost reach stopRunningWinVal
     globalCookie = await pcIndex();
     logger.debug('1======cookie:', globalCookie);
     await safeAfterlogin(globalCookie);
