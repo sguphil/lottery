@@ -147,9 +147,9 @@ async function logout(cookie) {
   return res;
 }
 
-// https://123.jn700.com/betType/lotterTime.mvc?gameType=19
+// https://123.jn700.com/betType/lotterTime.mvc?gameType=206
 async function getLotterTime(cookie) {
-  let url = settings.config.rootUrl + '/betType/lotterTime.mvc?gameType=19';
+  let url = settings.config.rootUrl + '/betType/lotterTime.mvc?gameType=206';
 
   //设置头部
   let headers = {
@@ -199,7 +199,7 @@ async function getUserInfo(cookie) {
 async function initPk10(cookie) {
   // init pk10
   let opts = {
-    url: settings.config.rootUrl + '/gameType/initGame.mvc?gameID=19',
+    url: settings.config.rootUrl + '/gameType/initGame.mvc?gameID=206',
     headers: {
       // 'User-Agent': `Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:66.0) Gecko/20100101 Firefox/66.0`,
       Cookie: cookie,
@@ -227,7 +227,7 @@ function buildBettingPara(pk10Gameinfo, bettingNum) {
   let issueNo = gameInfo.data.current.lotteryNums.issueno;
   logger.debug('=======111=====token_tz, danwei:', token_tz, danwei);
   let bettingParaObj = {
-    'gameId': 19,
+    'gameId': 206,
     'token': token_tz,
     'issueNo': issueNo,
     'zhuiHaoQiHao': [],
@@ -336,9 +336,10 @@ async function betting7(cookie, bettingParaObj, bettingNum, seperaters, position
   bettingParaObj.touZhuHaoMa[0].digit = position;
 
   let tmpTimes = 0;
+  let small = ['01', '02', '03', '04', '05', '06', '07'];
+  let big = ['04', '05', '06', '07', '08', '09', '10']; 
   if (!isBingo(position, globalRecord, history)) { // should double
-    let small = ['01', '02', '03', '04', '05', '06', '07'];
-    let big = ['04', '05', '06', '07', '08', '09', '10'];
+    
     let random = Math.floor(Math.random() * 2);
     if (settings.config.betStategy == 2){
       random = 0;
@@ -353,6 +354,14 @@ async function betting7(cookie, bettingParaObj, bettingNum, seperaters, position
         seperaters[parseInt(position)] = big;
     }
     //seperaters[parseInt(position)] = ['01', '02', '03', '04', '05', '06', '07'];
+    // small, small, big stratage
+    if ((globalRecord['rank' + position].reverse + 1) % 3 == 0){
+      seperaters[parseInt(position)] = big;
+      globalRecord['rank' + position].reverse = 0;
+    }else{
+      globalRecord['rank' + position].reverse += 1;
+      seperaters[parseInt(position)] = small;
+    }
     bettingNum = seperaters.join('');
     bettingParaObj.touZhuHaoMa[0].touZhuHaoMa = bettingNum;
     if (globalRecord['rank' + position].times < globalMultiple.length-1) {
@@ -370,6 +379,17 @@ async function betting7(cookie, bettingParaObj, bettingNum, seperaters, position
       updateRunningStatus(false, position, globalRecord);
     }
   } else {
+    // small, small, big
+    if ((globalRecord['rank' + position].reverse + 1) % 3 == 0){
+      seperaters[parseInt(position)] = big;
+      globalRecord['rank' + position].reverse = 0;
+    }else{
+      globalRecord['rank' + position].reverse += 1;
+      seperaters[parseInt(position)] = small;
+    }
+    bettingNum = seperaters.join('');
+    bettingParaObj.touZhuHaoMa[0].touZhuHaoMa = bettingNum;
+    // small, small, big
     bettingParaObj.touZhuHaoMa[0].touZhuBeiShu = globalMultiple[0];
     tmpTimes = 0;
     if(position){
@@ -446,60 +466,70 @@ let globalRecord = {
     bettingNums: '',
     result: false,
     times: 0,
+    reverse:0,
   },
   rank1: {
     issueNo: '',
     bettingNums: '',
     result: false,
     times: 0,
+    reverse:0,
   },
   rank2: {
     issueNo: '',
     bettingNums: '',
     result: false,
     times: 0,
+    reverse:0,
   },
   rank3: {
     issueNo: '',
     bettingNums: '',
     result: false,
     times: 0,
+    reverse:0,
   },
   rank4: {
     issueNo: '',
     bettingNums: '',
     result: false,
     times: 0,
+    reverse:0,
   },
   rank5: {
     issueNo: '',
     bettingNums: '',
     result: false,
     times: 0,
+    reverse:0,
   },
   rank6: {
     issueNo: '',
     bettingNums: '',
     result: false,
     times: 0,
+    reverse:0,
   },
   rank7: {
     issueNo: '',
     bettingNums: '',
     result: false,
     times: 0,
+    reverse:0,
   },
   rank8: {
     issueNo: '',
     bettingNums: '',
     result: false,
     times: 0,
+    reverse:0,
   },
   rank9: {
     issueNo: '',
     bettingNums: '',
     result: false,
     times: 0,
+    reverse:0,
   },
 }
 
@@ -601,6 +631,7 @@ function copyArr(srcArr, targetArr) {
 }
 
 function getBettingNum(){
+  /*
     let totalLottery = ['01,02,03,04,05,06,07',
         '02,03,04,05,06,07,08',
         '03,04,05,06,07,08,09',
@@ -609,11 +640,16 @@ function getBettingNum(){
         '01,02,03,08,09,10,05',
         '01,02,03,08,09,10,06',
         '01,02,03,08,09,10,07'];
-    let indexArr = [0, 1, 2, 3, 4, 5, 6, 7];
+        */
+    let totalLottery = ['01,02,03,04,05,06,07',  '04,05,06,07,08,09,10'];  
+    let indexArr = [0];//, 1, 2, 3, 4, 5, 6, 7];
     let theNumIndex = lodash.shuffle(indexArr)[0];
     let theNum = totalLottery[0];
     if (settings.config.betStategy == 1){
       theNum = totalLottery[theNumIndex];
+    }
+    else{
+      theNum = totalLottery[0];
     }
     
     return theNum;
@@ -666,14 +702,14 @@ async function intervalBetting() {
       gCurrentLotteryVal = userInfoBody.data.lotteryBal;
     }
 
-    let forceStopLostVal = gCurrentLotteryVal - gStopRunningLostVal;
+    let forceStopLostVal = parseInt(gCurrentLotteryVal) - parseInt(gStopRunningLostVal);
     if (userInfoBody.data.lotteryBal < forceStopLostVal) {
       gServiceStatus = 'forceStop';
       logger.warn('Warning !!! reach force stop lost value:', userInfoBody.data.lotteryBal, forceStopLostVal);
       return;
     }
 
-    let forceStopWinVal = gCurrentLotteryVal + gStopRunningWinVal;
+    let forceStopWinVal = parseInt(gCurrentLotteryVal) + parseInt(gStopRunningWinVal);
     if (userInfoBody.data.lotteryBal >= forceStopWinVal) {
       gServiceStatus = 'forceStop';
       logger.warn('Warning !!! reach force stop win value:', userInfoBody.data.lotteryBal, forceStopWinVal);

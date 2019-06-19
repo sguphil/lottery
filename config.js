@@ -1,7 +1,7 @@
 exports.config = {
     rootUrl: 'https://123.jn700.com',
-    userName:'kgcphy',
-    password:'103x',
+    userName:'kgcpdl75',
+    password:'10Wx',
     maxWinVal: 100,
     maxLostVal:50,
     bettingUnit:100, // 1000:li 100:fen 10:jiao 1:yuan
